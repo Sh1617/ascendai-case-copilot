@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Save, FilePlus } from 'lucide-react';
 import { PageHeader } from '../components/ui/index.jsx';
+import { createCase } from '../services/api.js';
 
 const CASE_TYPES = ['H-1B Visa', 'H-4 EAD', 'L-1 Visa', 'O-1 Visa', 'E-3 Visa', 'TN Visa', 'Green Card (EB-2)', 'Green Card (EB-3)', 'EB-2 NIW', 'PERM Labor Certification', 'Asylum', 'Family Petition'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
@@ -9,6 +10,8 @@ const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 export default function CreateCase() {
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState(null);
   const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
     clientName: '',
@@ -24,6 +27,7 @@ export default function CreateCase() {
   const set = (field, val) => {
     setForm(f => ({ ...f, [field]: val }));
     if (errors[field]) setErrors(e => ({ ...e, [field]: null }));
+    if (apiError) setApiError(null);
   };
 
   const validate = () => {
@@ -35,10 +39,23 @@ export default function CreateCase() {
     return e;
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    navigate('/cases');
+    setSubmitting(true);
+    setApiError(null);
+    try {
+      await createCase({
+        client_name: form.clientName,
+        case_type: form.caseType,
+        priority: form.priority,
+      });
+      navigate('/cases');
+    } catch (err) {
+      setApiError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDraft = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
@@ -63,6 +80,13 @@ export default function CreateCase() {
         <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-5 text-emerald-700 text-sm fade-in">
           <CheckCircle size={16} />
           Draft saved successfully
+        </div>
+      )}
+
+      {apiError && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg mb-5 text-red-700 text-sm fade-in">
+          <AlertCircle size={16} />
+          {apiError}
         </div>
       )}
 
@@ -167,7 +191,6 @@ export default function CreateCase() {
           <p className="text-xs text-slate-400 mt-2">Notes are visible to all case team members.</p>
         </div>
 
-        {/* Priority indicator */}
         {form.priority === 'Urgent' && (
           <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl fade-in">
             <AlertCircle size={17} className="text-red-500 shrink-0 mt-0.5" />
@@ -180,9 +203,13 @@ export default function CreateCase() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 pb-4">
-          <button onClick={handleCreate} className="btn-primary py-3 flex-1 sm:flex-none sm:px-8 justify-center text-sm">
+          <button
+            onClick={handleCreate}
+            disabled={submitting}
+            className="btn-primary py-3 flex-1 sm:flex-none sm:px-8 justify-center text-sm disabled:opacity-60"
+          >
             <FilePlus size={16} />
-            Create Case
+            {submitting ? 'Creating...' : 'Create Case'}
           </button>
           <button onClick={handleDraft} className="btn-secondary py-3 flex-1 sm:flex-none sm:px-8 justify-center text-sm">
             <Save size={16} />

@@ -8,17 +8,26 @@ import { StatCard, Badge, HealthBar, PageHeader } from '../components/ui/index.j
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 
+// ── Static chart/insight data (not yet from backend) ──────────────────
+import {
+  trendData,
+  statusChartData,
+  aiInsights,
+  cases as mockCases,
+} from '../data/mockData.js';
+
+// ── Styles & helpers ──────────────────────────────────────────────────
 const insightStyles = {
   warning: { bg: 'bg-amber-50', border: 'border-amber-200', icon: 'text-amber-500', text: 'text-amber-800' },
-  danger: { bg: 'bg-red-50', border: 'border-red-200', icon: 'text-red-500', text: 'text-red-800' },
-  info: { bg: 'bg-brand-50', border: 'border-brand-200', icon: 'text-brand-500', text: 'text-brand-800' },
+  danger:  { bg: 'bg-red-50',   border: 'border-red-200',   icon: 'text-red-500',   text: 'text-red-800'  },
+  info:    { bg: 'bg-brand-50', border: 'border-brand-200', icon: 'text-brand-500', text: 'text-brand-800' },
   success: { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: 'text-emerald-500', text: 'text-emerald-800' },
 };
 
 const InsightIcon = ({ type }) => {
   if (type === 'warning') return <FileX size={16} />;
-  if (type === 'danger') return <AlertTriangle size={16} />;
-  if (type === 'info') return <Clock size={16} />;
+  if (type === 'danger')  return <AlertTriangle size={16} />;
+  if (type === 'info')    return <Clock size={16} />;
   return <TrendingUp size={16} />;
 };
 
@@ -39,14 +48,50 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+// ── Skeleton loader for stat cards ────────────────────────────────────
+const StatSkeleton = () => (
+  <div className="card p-5 animate-pulse">
+    <div className="h-3 w-24 bg-slate-200 rounded mb-3" />
+    <div className="h-7 w-16 bg-slate-200 rounded mb-2" />
+    <div className="h-3 w-20 bg-slate-100 rounded" />
+  </div>
+);
+
+// ── Dashboard component ───────────────────────────────────────────────
 export default function Dashboard() {
-  const recentCases = cases.slice(0, 6);
+  const [stats, setStats]     = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+
+  // Recent cases — still from mock until Cases integration is done
+  const recentCases = mockCases.slice(0, 6);
+
+  useEffect(() => {
+    api.dashboard.getStats()
+      .then(data => setStats(data))
+      .catch(err  => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Derive dynamic AI insights from real stats once loaded
+  const dynamicInsights = stats
+    ? [
+        { type: 'warning', text: `${stats.missing_documents} cases missing critical documents` },
+        { type: 'danger',  text: `${stats.high_risk_cases} high-risk cases need immediate attention` },
+        { type: 'info',    text: `${stats.active_cases} cases currently active` },
+        { type: 'success', text: `${stats.completed_cases} cases completed successfully` },
+      ]
+    : aiInsights; // fall back to mock while loading
 
   return (
     <div className="fade-in">
       <PageHeader
         title="Dashboard"
-        subtitle={`Good morning, Jennifer. You have ${stats.highRiskCases} cases needing attention.`}
+        subtitle={
+          stats
+            ? `You have ${stats.high_risk_cases} high-risk cases needing attention.`
+            : 'Loading your dashboard…'
+        }
       >
         <Link to="/create-case" className="btn-primary">
           <Plus size={16} />
@@ -54,12 +99,48 @@ export default function Dashboard() {
         </Link>
       </PageHeader>
 
-      {/* Stats */}
+      {/* Error banner */}
+      {error && (
+        <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          ⚠️ Could not load live stats: {error}. Showing mock data below.
+        </div>
+      )}
+
+      {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Total Cases" value={stats.totalCases} change={stats.changes.totalCases} icon={FolderOpen} iconColor="bg-brand-50 text-brand-600" trend="up" />
-        <StatCard title="Active Cases" value={stats.activeCases} change={stats.changes.activeCases} icon={Activity} iconColor="bg-emerald-50 text-emerald-600" trend="up" />
-        <StatCard title="High Risk Cases" value={stats.highRiskCases} change={stats.changes.highRiskCases} icon={AlertTriangle} iconColor="bg-red-50 text-red-500" trend="down" />
-        <StatCard title="Missing Documents" value={stats.missingDocuments} change={stats.changes.missingDocuments} icon={FileX} iconColor="bg-amber-50 text-amber-500" />
+        {loading ? (
+          [1,2,3,4].map(i => <StatSkeleton key={i} />)
+        ) : (
+          <>
+            <StatCard
+              title="Total Cases"
+              value={stats?.total_cases ?? '—'}
+              icon={FolderOpen}
+              iconColor="bg-brand-50 text-brand-600"
+              trend="up"
+            />
+            <StatCard
+              title="Active Cases"
+              value={stats?.active_cases ?? '—'}
+              icon={Activity}
+              iconColor="bg-emerald-50 text-emerald-600"
+              trend="up"
+            />
+            <StatCard
+              title="High Risk Cases"
+              value={stats?.high_risk_cases ?? '—'}
+              icon={AlertTriangle}
+              iconColor="bg-red-50 text-red-500"
+              trend="down"
+            />
+            <StatCard
+              title="Missing Documents"
+              value={stats?.missing_documents ?? '—'}
+              icon={FileX}
+              iconColor="bg-amber-50 text-amber-500"
+            />
+          </>
+        )}
       </div>
 
       {/* Charts + AI Insights */}
@@ -76,11 +157,11 @@ export default function Dashboard() {
             <AreaChart data={trendData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
               <defs>
                 <linearGradient id="gradNew" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
+                  <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gradCompleted" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                  <stop offset="5%"  stopColor="#10b981" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
@@ -89,8 +170,8 @@ export default function Dashboard() {
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', paddingTop: '12px' }} />
-              <Area type="monotone" dataKey="new" name="New Cases" stroke="#6366f1" strokeWidth={2} fill="url(#gradNew)" dot={false} />
-              <Area type="monotone" dataKey="completed" name="Completed" stroke="#10b981" strokeWidth={2} fill="url(#gradCompleted)" dot={false} />
+              <Area type="monotone" dataKey="new"       name="New Cases" stroke="#6366f1" strokeWidth={2} fill="url(#gradNew)"       dot={false} />
+              <Area type="monotone" dataKey="completed" name="Completed"  stroke="#10b981" strokeWidth={2} fill="url(#gradCompleted)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -125,7 +206,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Cases Table + AI Insights */}
+      {/* Recent Cases Table + AI Insights */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Recent Cases */}
         <div className="card xl:col-span-2">
@@ -162,7 +243,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* AI Insights */}
+        {/* AI Insights — driven by real stats */}
         <div className="card">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
             <div className="w-6 h-6 bg-gradient-to-br from-brand-500 to-indigo-600 rounded-md flex items-center justify-center">
@@ -171,7 +252,7 @@ export default function Dashboard() {
             <h2 className="text-sm font-semibold text-slate-900">AI Insights</h2>
           </div>
           <div className="p-4 space-y-2.5">
-            {aiInsights.map((insight, i) => {
+            {dynamicInsights.map((insight, i) => {
               const s = insightStyles[insight.type];
               return (
                 <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border ${s.bg} ${s.border}`}>
