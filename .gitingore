@@ -1,0 +1,119 @@
+# ===================================
+# Python Backend
+# ===================================
+
+backend/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
+
+backend/venv/
+backend/.venv/
+backend/env/
+
+# Environment variables
+backend/.env
+backend/.env.*
+
+# Uploads
+backend/uploads/
+
+# Logs
+backend/*.log
+backend/logs/
+
+# Testing
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+
+# Build files
+backend/build/
+backend/dist/
+backend/*.egg-info/
+
+# IDE
+backend/.idea/
+backend/.vscode/
+
+# ===================================
+# React Frontend
+# ===================================
+
+frontend/node_modules/
+
+frontend/dist/
+frontend/build/
+
+frontend/.env
+frontend/.env.*
+
+frontend/.vite/
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# IDE
+frontend/.idea/
+frontend/.vscode/
+
+# ===================================
+# OS Files
+# ===================================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===================================
+# Git
+# ===================================
+
+*.swp
+*.swo
+
+# ===================================
+# Secrets
+# ===================================
+
+*.pem
+*.key
+*.crt
+
+# ===================================
+# Database Dumps
+# ===================================
+
+*.sql
+*.sqlite
+*.sqlite3
+
+# ===================================
+# Temporary Files
+# ===================================
+
+tmp/
+temp/
+*.tmp
+
+# ===================================
+# Jupyter
+# ===================================
+
+.ipynb_checkpoints/
+
+# ===================================
+# Coverage Reports
+# ===================================
+
+coverage/
+.coverage
+
+# ===================================
+# Misc
+# ===================================
+
+.idea/
+.vscode/
